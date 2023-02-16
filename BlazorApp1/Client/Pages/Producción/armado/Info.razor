@@ -1,0 +1,107 @@
+﻿@page "/armado/{id:int}"
+<br />
+<button class="btn btn-outline-primary" @onclick="ComeBack"><FeatherArrowLeft Color="Blue"></FeatherArrowLeft></button>
+<br />
+<br />
+<h1>Información correspondiente a la orden n° @id</h1>
+<hr />
+<br />
+
+<br />
+<br />
+<button class="btn btn-outline-success">Comenzar</button>&nbsp;
+<button class="btn btn-outline-danger">Pausar</button>&nbsp;
+<button class="btn btn-outline-primary" @onclick="alertaSend">Finalizar armado</button>
+
+@code {
+    [Parameter] public int id { get; set; }
+    Ordentrabajo oTrabajo = new();
+    List<Insumo> oRtaInsumos;
+    Insumo insumo = new();
+    int cantidad;
+    protected override async Task OnInitializedAsync()
+    {
+        
+        var response = await http.GetFromJsonAsync<Respuesta<Ordentrabajo>>($"/api/ot/{id}");
+        oTrabajo = response.List;
+        var response2 = await http.GetFromJsonAsync<Respuesta<List<Insumo>>>("/api/insumo");
+        oRtaInsumos = response2.List;
+    }
+    async Task ComeBack()
+    {
+        nav.NavigateTo("/armado");
+    }
+
+    public async Task alertaSend()
+    {
+        SweetAlertResult result = await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "¿Está seguro?",
+                Text = "Se enviará a control de armado",
+                Icon = SweetAlertIcon.Success,
+                ShowCancelButton = true,
+                ConfirmButtonText = "Enviar",
+                CancelButtonText = "Cancelar"
+            });
+
+        if (!string.IsNullOrEmpty(result.Value))
+        {
+            send();
+        }
+        else if (result.Dismiss == DismissReason.Cancel)
+        {
+
+        }
+    }
+
+    async Task send()
+    {
+        oTrabajo.Estado = "CA";
+
+        List<TimesEtapa> listTimes = JsonSerializer.Deserialize<List<TimesEtapa>>(oTrabajo.Fechas);
+        TimesEtapa times = listTimes.Where(x => x.Etapa == "Armado").Last();
+        listTimes.RemoveAll(x => x == times);
+
+        times.Times.Add(Tuple.Create("Salida", DateTime.Now));
+        DateTime entrada = times.Times.Where(x => x.Item1 == "Entrada").Last().Item2;
+        times.TimeTotalEtapa = (int)(DateTime.Now - entrada).TotalMinutes;
+
+        listTimes.Add(times);
+
+        TimesEtapa times2 = new("CA");
+        listTimes.Add(times2);
+
+        oTrabajo.Fechas = JsonSerializer.Serialize<List<TimesEtapa>>(listTimes);
+
+        await http.PutAsJsonAsync<Ordentrabajo>("/api/ot", oTrabajo);
+        ComeBack();
+    }
+    public async Task enviar()
+    {
+        insumo.StockReal -= cantidad;
+        var a = await http.PutAsJsonAsync<Insumo>("/api/insumo", insumo);
+        if (a.IsSuccessStatusCode)
+        {
+            alertaOk();
+        }
+    }
+    public async Task alertaOk()
+    {
+        SweetAlertResult result = await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "Se descontó correctamente el stock.",
+                Icon = SweetAlertIcon.Success,
+                ShowCancelButton = false,
+                ConfirmButtonText = "Entendido"
+
+            });
+
+        if (!string.IsNullOrEmpty(result.Value))
+        {
+        }
+        else if (result.Dismiss == DismissReason.Cancel)
+        {
+
+        }
+    }
+}

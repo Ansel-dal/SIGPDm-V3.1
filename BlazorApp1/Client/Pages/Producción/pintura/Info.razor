@@ -1,0 +1,100 @@
+﻿@page "/pintura/{id:int}"
+<br />
+<button class="btn btn-outline-primary" @onclick="ComeBack"><FeatherArrowLeft Color="Blue"></FeatherArrowLeft></button>
+<br />
+<br />
+<h1>Información correspondiente a la orden n° @id</h1>
+<hr />
+<label>Ingrese número de remito</label>
+<div class="col-lg-3">
+    <div class="input-group">
+        <input @bind=@nroRemito class="form-control"></input>
+        <span class="input-group-btn">
+            <button class="btn btn-outline" title="Enviar" @onclick="enviar"><FeatherSend Color="black" /></button>
+        </span>
+    </div>
+</div>
+<br />
+<button class="btn btn-outline-success">Comenzar</button>&nbsp;
+<button class="btn btn-outline-danger">Pausar</button>&nbsp;
+<button class="btn btn-outline-primary" @onclick="alertaSend">Finalizar pintura</button>
+
+@code {
+    [Parameter] public int id { get; set; }
+    Ordentrabajo oTrabajo = new();
+    int nroRemito;
+    protected override async Task OnInitializedAsync()
+    {
+
+        var response = await http.GetFromJsonAsync<Respuesta<Ordentrabajo>>($"/api/ot/{id}");
+        oTrabajo = response.List;
+
+    }
+    async Task ComeBack()
+    {
+        nav.NavigateTo("/pintura");
+    }
+
+    public async Task alertaSend()
+    {
+        SweetAlertResult result = await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "¿Está seguro?",
+                Text = "Se enviará a control de pintura",
+                Icon = SweetAlertIcon.Success,
+                ShowCancelButton = true,
+                ConfirmButtonText = "Enviar",
+                CancelButtonText = "Cancelar"
+            });
+
+        if (!string.IsNullOrEmpty(result.Value))
+        {
+            send();
+        }
+        else if (result.Dismiss == DismissReason.Cancel)
+        {
+
+        }
+    }
+    async Task send()
+    {
+        oTrabajo.Estado = "CP";
+
+        List<TimesEtapa> listTimes = JsonSerializer.Deserialize<List<TimesEtapa>>(oTrabajo.Fechas);
+        TimesEtapa times = listTimes.Where(x => x.Etapa == "Pintura").Last();
+        listTimes.RemoveAll(x => x == times);
+
+        times.Times.Add(Tuple.Create("Salida", DateTime.Now));
+        DateTime entrada = times.Times.Where(x => x.Item1 == "Entrada").Last().Item2;
+        times.TimeTotalEtapa = (int)(DateTime.Now - entrada).TotalMinutes;
+
+        listTimes.Add(times);
+
+        TimesEtapa times2 = new("CP");
+        listTimes.Add(times2);
+
+        oTrabajo.Fechas = JsonSerializer.Serialize<List<TimesEtapa>>(listTimes);
+
+        await http.PutAsJsonAsync<Ordentrabajo>("/api/ot", oTrabajo);
+        ComeBack();
+
+    }
+    public async Task enviar()
+    {
+
+        alertaOk();
+
+    }
+
+    public async Task alertaOk()
+    {
+        SweetAlertResult result = await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "Se envió el remito.",
+                Icon = SweetAlertIcon.Success,
+                ShowCancelButton = false,
+                ConfirmButtonText = "Entendido"
+
+            });
+    }
+}

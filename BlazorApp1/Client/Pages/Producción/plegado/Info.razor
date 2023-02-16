@@ -1,0 +1,73 @@
+﻿@page "/plegado/{id:int}"
+<br />
+<button class="btn btn-outline-primary" @onclick="ComeBack"><FeatherArrowLeft Color="Blue"></FeatherArrowLeft></button>
+<br />
+<br />
+<h1>Información correspondiente a la orden n° @id</h1>
+<hr />
+
+<button class="btn btn-outline-success">Comenzar</button>&nbsp;
+<button class="btn btn-outline-danger">Pausar</button>&nbsp;
+<button class="btn btn-outline-primary" @onclick="alertaSend">Finalizar plegado</button>
+
+@code {
+    [Parameter] public int id { get; set; }
+    Ordentrabajo oTrabajo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var response = await http.GetFromJsonAsync<Respuesta<Ordentrabajo>>($"/api/ot/{id}");
+        oTrabajo = response.List;
+
+    }
+    async Task ComeBack()
+    {
+        nav.NavigateTo("/plegado");
+    }
+
+    public async Task alertaSend()
+    {
+        SweetAlertResult result = await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "¿Está seguro?",
+                Text = "Se enviará a control de plegado",
+                Icon = SweetAlertIcon.Success,
+                ShowCancelButton = true,
+                ConfirmButtonText = "Enviar",
+                CancelButtonText = "Cancelar"
+            });
+
+        if (!string.IsNullOrEmpty(result.Value))
+        {
+            send();
+        }
+        else if (result.Dismiss == DismissReason.Cancel)
+        {
+
+        }
+    }
+
+    async Task send()
+    {
+        oTrabajo.Estado = "CPL";
+
+        List<TimesEtapa> listTimes = JsonSerializer.Deserialize<List<TimesEtapa>>(oTrabajo.Fechas);
+        TimesEtapa times = listTimes.Where(x => x.Etapa == "Plegado").Last();
+        listTimes.RemoveAll(x => x == times);
+
+        times.Times.Add(Tuple.Create("Salida", DateTime.Now));
+        DateTime entrada = times.Times.Where(x => x.Item1 == "Entrada").Last().Item2;
+        times.TimeTotalEtapa = (int)(DateTime.Now - entrada).TotalMinutes;
+
+        listTimes.Add(times);
+
+        TimesEtapa times2 = new("CPL");
+        listTimes.Add(times2);
+
+        oTrabajo.Fechas = JsonSerializer.Serialize<List<TimesEtapa>>(listTimes);
+
+        await http.PutAsJsonAsync<Ordentrabajo>("/api/ot", oTrabajo);
+        ComeBack();
+    }
+}

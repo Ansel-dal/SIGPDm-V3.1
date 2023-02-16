@@ -1,0 +1,14 @@
+﻿@page "/reporteproduccion"
+<br />
+<button class="btn btn-outline-primary" @onclick="ComeBack"><FeatherArrowLeft Color="Blue"></FeatherArrowLeft></button>
+<br />
+<br />
+<h1>Reporte de producción</h1>
+<p>Descripción (*)</p>
+<hr />
+
+@code {
+    public void ComeBack(){
+        nav.NavigateTo("/produccion");
+    }
+}

@@ -1,0 +1,140 @@
+﻿@page "/soldadura/{id:int}"
+<br />
+<button class="btn btn-outline-primary" @onclick="ComeBack"><FeatherArrowLeft Color="Blue"></FeatherArrowLeft></button>
+<br />
+<br />
+<h1>Información correspondiente a la orden n° @id</h1>
+<hr />
+<br />
+<center>
+    <RadzenSteps Style="width:70%;">
+        <Steps>
+            <RadzenStepsItem Text="Seleccionar insumo a utilizar">
+                <center>
+                    <RadzenDropDownDataGrid TValue="Insumo" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" AllowFiltering="true" AllowClear="true"
+                                            Data=@(oRtaInsumos) Style="width: 50%" AllowColumnResize="true" @bind-Value="insumo"
+                                            TextProperty="Descripcion" AllowFilteringByAllStringColumns="true">
+
+                        <Columns>
+                            <RadzenDropDownDataGridColumn Property="Descripcion" Title="Descripción" Width="100px" />
+                            <RadzenDropDownDataGridColumn Property="Codigo" Title="Código" Width="100px" />
+                            <RadzenDropDownDataGridColumn Property="StockReal" Title="Stock" Width="100px" />
+                        </Columns>
+                    </RadzenDropDownDataGrid>
+                </center>
+            </RadzenStepsItem>
+            <RadzenStepsItem Text="Elegir cantidad a utilizar">
+                <center>
+                    <div class="col-lg-3">
+                        <div class="input-group">
+                            <input @bind=@cantidad class="form-control" style="width:40%;"></input>
+                            <span class="input-group-btn">
+                                <button class="btn btn-outline" title="Enviar" @onclick="enviar"><FeatherSend Color="black" /></button>
+                            </span>
+                        </div>
+                    </div>
+                </center>
+            </RadzenStepsItem>
+
+        </Steps>
+    </RadzenSteps>
+</center>
+<br />
+<br />
+<button class="btn btn-outline-success">Comenzar</button>&nbsp;
+<button class="btn btn-outline-danger">Pausar</button>&nbsp;
+<button class="btn btn-outline-primary" @onclick="alertaSend">Finalizar soldado</button>
+
+@code {
+    [Parameter] public int id { get; set; }
+    Ordentrabajo oTrabajo = new();
+    List<Insumo> oRtaInsumos;
+    Insumo insumo = new();
+    int cantidad;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var response = await http.GetFromJsonAsync<Respuesta<Ordentrabajo>>($"/api/ot/{id}");
+        oTrabajo = response.List;
+        var response2 = await http.GetFromJsonAsync<Respuesta<List<Insumo>>>("/api/insumo");
+        oRtaInsumos = response2.List;
+    }
+    async Task ComeBack()
+    {
+        nav.NavigateTo("/soldadura");
+    }
+
+    public async Task alertaSend()
+    {
+        SweetAlertResult result = await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "¿Está seguro?",
+                Text = "Se enviará a pulido",
+                Icon = SweetAlertIcon.Success,
+                ShowCancelButton = true,
+                ConfirmButtonText = "Enviar",
+                CancelButtonText = "Cancelar"
+            });
+
+        if (!string.IsNullOrEmpty(result.Value))
+        {
+            send();
+        }
+        else if (result.Dismiss == DismissReason.Cancel)
+        {
+
+        }
+    }
+
+    async Task send()
+    {
+        oTrabajo.Estado = "Pulido";
+
+        List<TimesEtapa> listTimes = JsonSerializer.Deserialize<List<TimesEtapa>>(oTrabajo.Fechas);
+        TimesEtapa times = listTimes.Where(x => x.Etapa == "Soldadura").Last();
+        listTimes.RemoveAll(x => x == times);
+
+        times.Times.Add(Tuple.Create("Salida", DateTime.Now));
+        DateTime entrada = times.Times.Where(x => x.Item1 == "Entrada").Last().Item2;
+        times.TimeTotalEtapa = (int)(DateTime.Now - entrada).TotalMinutes;
+
+        listTimes.Add(times);
+
+        TimesEtapa times2 = new("Pulido");
+        listTimes.Add(times2);
+
+        oTrabajo.Fechas = JsonSerializer.Serialize<List<TimesEtapa>>(listTimes);
+
+        await http.PutAsJsonAsync<Ordentrabajo>("/api/ot", oTrabajo);
+        ComeBack();
+    }
+    public async Task enviar()
+    {
+        insumo.StockReal -= cantidad;
+        var a = await http.PutAsJsonAsync<Insumo>("/api/insumo", insumo);
+        if (a.IsSuccessStatusCode)
+        {
+            alertaOk();
+        }
+    }
+    public async Task alertaOk()
+    {
+        SweetAlertResult result = await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "Se descontó correctamente el stock.",
+                Icon = SweetAlertIcon.Success,
+                ShowCancelButton = false,
+                ConfirmButtonText = "Entendido"
+
+            });
+
+        if (!string.IsNullOrEmpty(result.Value))
+        {
+        }
+        else if (result.Dismiss == DismissReason.Cancel)
+        {
+
+        }
+    }
+}

@@ -1,0 +1,175 @@
+﻿<div class="card">
+    <div class="card-body">
+
+        <EditForm Model="@oInsumo" OnValidSubmit="Guardar">
+            <DataAnnotationsValidator />
+            <ValidationSummary ShowValidationErrors="false" />
+            <div class="row">
+                <div class="col-sm-4">
+                    <label>Descripción</label>
+                    <InputText class="form-control" @bind-Value="@oInsumo.Descripcion" placeholder="Descripción"></InputText>
+                    <ValidationMessage For="(()=> oInsumo.Descripcion)" style="color:red;" />
+                </div>
+                <div class="col-sm-4">
+                    <label class="col-sm">Código</label>
+                    <InputText @bind-Value="@oInsumo.Codigo" class="form-control" placeholder="Código"></InputText>
+                    <ValidationMessage For="(()=> oInsumo.Codigo)" style="color:red;" />
+                </div>
+                <div class="col-sm-4">
+                    <label class="col-sm">Foto</label>
+                    <InputFile OnChange="@OnInputFileChange" multiple />
+                </div>
+            </div>
+            <br />
+            <div class="row">
+                <div class="col-sm-4">
+                    <label>Stock minimo</label>
+                    <InputNumber class="form-control" @bind-Value="@oInsumo.StockMin" placeholder="Stock minimo"></InputNumber>
+                    <ValidationMessage For="(()=> oInsumo.StockMin)" style="color:red;" />
+                </div>
+                <div class="col-sm-4">
+                    <label>Stock real</label>
+                    <InputNumber class="form-control" @bind-Value="@oInsumo.StockReal" placeholder="Stock real"></InputNumber>
+                    <ValidationMessage For="(()=> oInsumo.StockReal)" style="color:red;" />
+                </div>
+                <div class="col-sm-4">
+                    <label>Stock maximo</label>
+                    <InputNumber class="form-control" @bind-Value="@oInsumo.StockMax" placeholder="Stock maximo"></InputNumber>
+                    <ValidationMessage For="(()=> oInsumo.StockMax)" style="color:red;" />
+                </div>
+            </div>
+
+            <br />
+            <button type="submit" class="btn btn-primary mr-2">Aceptar</button>
+            <button type="button" @onclick="cancel" class="btn btn-light">Cancelar</button>
+        </EditForm>
+    </div>
+</div>
+
+
+@code {
+    Insumo oInsumo = new();
+    Respuesta<Insumo> oRta = new();
+    [CascadingParameter] BlazoredModalInstance ModalInstance { get; set; }
+    [Parameter] public int id { get; set; }
+
+
+    //upload files
+    private List<File> files = new();
+    private List<UploadResult> uploadResults = new();
+    private int maxAllowedFiles = 10;
+    private bool shouldRender;
+    MultipartFormDataContent content = new MultipartFormDataContent();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        
+        if (id != 0)
+        {
+            oRta = await http.GetFromJsonAsync<Respuesta<Insumo>>($"/api/Insumo/{id}");
+            oInsumo = oRta.List;
+        }
+    }
+
+    async Task Guardar()
+    {
+
+        Upload();
+        oInsumo.Foto = $"/imagenes/insumos/{oInsumo.Codigo}.png";
+
+        if (id == 0)
+        {
+            
+            await http.PostAsJsonAsync<Insumo>("/api/Insumo", oInsumo);
+            await ModalInstance.CloseAsync(ModalResult.Ok($"Form was submitted successfully."));
+        }
+        else
+        {
+            await http.PutAsJsonAsync<Insumo>("/api/Insumo", oInsumo);
+            await ModalInstance.CloseAsync(ModalResult.Ok($"Form was submitted successfully."));
+        }
+    }
+    async Task cancel()
+    {
+        await ModalInstance.CloseAsync(ModalResult.Ok($"Form was cancelled"));
+
+    }
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        shouldRender = false;
+        long maxFileSize = 1024 * 1500000;
+
+        var upload = false;
+
+        foreach (var file in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            if (uploadResults.SingleOrDefault(
+                f => f.FileName == file.Name) is null)
+            {
+                try
+                {
+
+                    var fileContent =
+                        new StreamContent(file.OpenReadStream(maxFileSize));
+
+
+
+                    files.Add(new() { Name = $"{oInsumo.Codigo}.png" });
+
+                    content.Add(
+                        content: fileContent,
+                        name: "\"files\"",
+                        fileName: $"{oInsumo.Codigo}.png");
+                    upload = true;
+                }
+                catch (Exception ex)
+                {
+
+                    Console.WriteLine(ex.Message);
+
+                    uploadResults.Add(
+                        new()
+                            {
+                                FileName = file.Name,
+                                ErrorCode = 6,
+                                Uploaded = false
+                            });
+                }
+            }
+        }
+
+
+        shouldRender = true;
+    }
+
+    public async Task Upload(){
+        var client = ClientFactory.CreateClient();
+        var response =
+            await client.PostAsync($"{nav.BaseUri}api/images",
+            content);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                };
+
+            using var responseStream =
+                await response.Content.ReadAsStreamAsync();
+
+            var newUploadResults = await JsonSerializer
+                .DeserializeAsync<IList<UploadResult>>(responseStream, options);
+
+            if (newUploadResults is not null)
+            {
+                uploadResults = uploadResults.Concat(newUploadResults).ToList();
+            }
+        }
+    }
+    private class File
+    {
+        public string? Name { get; set; }
+    }
+}

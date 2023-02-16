@@ -1,0 +1,197 @@
+﻿@page "/ordenes"
+<br />
+<button class="btn btn-outline-primary" @onclick="ComeBack"><FeatherArrowLeft Color="Blue"></FeatherArrowLeft></button>
+<br />
+<br />
+<h1>Generador de órdenes de compra</h1>
+<p>En esta sección se podrán gestionar las órdenes de compra.</p>
+<hr />
+
+
+@if (oRespuesta != null)
+{
+    <RadzenTabs Class="w-100 mx-auto" RenderMode="TabRenderMode.Client">
+        <Tabs>
+            <RadzenTabsItem Text="Generadas">
+                <RadzenDataGrid AllowFiltering="true" AllowColumnResize="true" AllowAlternatingRows="true" FilterMode="FilterMode.Advanced" AllowSorting="false" PageSize="5"
+                            AllowPaging="true" ShowPagingSummary="true"
+                            Data="@oRespuestaGenerada" TItem="Ordencompra" ColumnWidth="50px" LogicalFilterOperator="LogicalFilterOperator.Or">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="" Title="Id" Width="50px">
+                            <Template Context="data">
+                                <a>@($"OC{data.Id}")</a>
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="Insumo" Title="Insumo" Width="70px" />
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="Cantidad" Title="Cantidad" Width="80px" />
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="Proveedor" Title="Proveedor" Width="30px" Filterable="false" />
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="Precio" Title="Precio" Width="30px" Filterable="false" />
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="CondicionPago" Title="Condicion de pago" Width="30px" Filterable="false" />
+
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="" Title="" Filterable="false" Width="30px">
+                            <Template Context="data">
+                                <button class="btn" title="Aprobar/rechazar orden de compra" @onclick="() => alertaAprobar(data)"><FeatherCheckCircle Color="green" /></button>
+                            </Template>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="" Title="" Filterable="false" Width="30px">
+                            <Template Context="data">
+                                <button class="btn" position="absolute" title="Ver info" @onclick="() => gotoinfo(data.Id)"><FeatherInfo Color="blue" /></button>
+                            </Template>
+                        </RadzenDataGridColumn>
+
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="Aprobadas">
+                <RadzenDataGrid AllowFiltering="true" AllowColumnResize="true" AllowAlternatingRows="true" FilterMode="FilterMode.Advanced" AllowSorting="false" PageSize="5"
+                            AllowPaging="true" ShowPagingSummary="true"
+                            Data="@oRespuestaAprobadas" TItem="Ordencompra" ColumnWidth="50px" LogicalFilterOperator="LogicalFilterOperator.Or">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="" Title="Id" Width="50px">
+                            <Template Context="data">
+                                <a>@($"OC{data.Id}")</a>
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="Insumo" Title="Insumo" Width="70px" />
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="Cantidad" Title="Cantidad" Width="80px" />
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="Proveedor" Title="Proveedor" Width="30px" Filterable="false" />
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="Precio" Title="Precio" Width="30px" Filterable="false" />
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="CondicionPago" Title="Condicion de pago" Width="30px" Filterable="false" />
+
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="" Title="" Filterable="false" Width="30px">
+                            <Template Context="data">
+                                <button class="btn" title="Ver info" @onclick="() => gotoinfo(data.Id)"><FeatherInfo Color="blue" /></button>
+                            </Template>
+                        </RadzenDataGridColumn>
+
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="Rechazadas">
+                <RadzenDataGrid AllowFiltering="true" AllowColumnResize="true" AllowAlternatingRows="true" FilterMode="FilterMode.Advanced" AllowSorting="false" PageSize="5"
+                            AllowPaging="true" ShowPagingSummary="true"
+                            Data="@oRespuestaRechazadas" TItem="Ordencompra" ColumnWidth="50px" LogicalFilterOperator="LogicalFilterOperator.Or">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="" Title="Id" Width="50px">
+                            <Template Context="data">
+                                <a>@($"OC{data.Id}")</a>
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="Insumo" Title="Insumo" Width="70px" />
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="Cantidad" Title="Cantidad" Width="80px" />
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="Proveedor" Title="Proveedor" Width="30px" Filterable="false" />
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="Precio" Title="Precio" Width="30px" Filterable="false" />
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="CondicionPago" Title="Condicion de pago" Width="30px" Filterable="false" />
+
+                        <RadzenDataGridColumn TItem="Ordencompra" Property="" Title="" Filterable="false" Width="30px">
+                            <Template Context="data">
+                                <button class="btn" title="Ver info" @onclick="() => gotoinfo(data.Id)"><FeatherInfo Color="blue" /></button>
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </RadzenTabsItem>
+        </Tabs>
+    </RadzenTabs>
+}
+else
+{
+    <br />
+    <center>
+        <div class="mb-2">
+            <RadzenProgressBar Value="100" ShowValue="false" ProgressBarStyle="ProgressBarStyle.Secondary" Mode="ProgressBarMode.Indeterminate" />
+        </div>
+    </center>
+}
+
+@code {
+    [CascadingParameter] public IModalService Modal { get; set; } = default!;
+    Respuesta<List<Ordencompra>> oRespuesta;
+    List<Ordencompra> oRespuestaGenerada;
+    List<Ordencompra> oRespuestaAprobadas;
+    List<Ordencompra> oRespuestaRechazadas;
+
+    protected override async Task OnInitializedAsync()
+    {
+        oRespuesta = await http.GetFromJsonAsync<Respuesta<List<Ordencompra>>>("/api/oc");
+        oRespuestaGenerada = oRespuesta.List.Where(x => x.Estado == "Generada").ToList();
+        oRespuestaAprobadas = oRespuesta.List.Where(x => x.Estado == "Aprobada").ToList();
+        oRespuestaRechazadas = oRespuesta.List.Where(x => x.Estado == "Rechazada").ToList();
+    }
+
+    public async Task alertaAprobar(Ordencompra orden)
+    {
+        SweetAlertResult result = await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = $"Cotizacion {orden.Id}",
+                Text = "¿Desea aprobar esta cotizacion?",
+                Icon = SweetAlertIcon.Success,
+                ShowCancelButton = true,
+                ShowDenyButton = true,
+                ConfirmButtonText = "Aprobar",
+                CancelButtonText = "Cancelar",
+                DenyButtonText = "Rechazar"
+            });
+            
+        if (result.IsConfirmed) //Codigo anterior: !string.IsNullOrEmpty(result.Value) No funcionaba(NICO)
+        {
+            Console.WriteLine(result.Value);
+            await aprobar(orden);
+
+        }
+        else if (result.IsDenied) 
+        {
+            Console.WriteLine(result.Value);
+            await rechazar(orden);
+        }
+        Console.WriteLine(result.Value);
+    }
+
+    async Task aprobar(Ordencompra orden)
+    {
+        var insumo = await http.GetFromJsonAsync<Respuesta<Insumo>>($"/api/insumo/{orden.Insumo}");
+        insumo.List.Recepcion = "Esperando recepcion";
+        await http.PutAsJsonAsync<Insumo>("/api/insumo", insumo.List);
+        orden.Aprobada = DateTime.Now;
+        orden.Estado = "Aprobada";
+        await http.PutAsJsonAsync<Ordencompra>($"/api/OC", orden);
+        await OnInitializedAsync();
+        StateHasChanged();
+    }
+
+    async Task rechazar(Ordencompra orden)
+    {
+        orden.Estado = "Rechazada";
+        await http.PutAsJsonAsync<Ordencompra>("/api/oc", orden);
+        await OnInitializedAsync(); //Agregado para que actualice luego de tocar el boton (NICO)
+        StateHasChanged();
+    }
+
+    async Task gotoinfo(int id)
+    {
+        var parameters = new ModalParameters();
+        var options = new ModalOptions()
+            {
+                HideHeader = true,
+            };
+        parameters.Add(nameof(Info.id), id);
+        var formModal = Modal.Show<Info>("", parameters, options);
+        var result = await formModal.Result;
+
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+        }
+        else
+        {
+            await OnInitializedAsync();
+        }
+    }
+
+
+    async Task ComeBack()
+    {
+        nav.NavigateTo("/compras");
+    }
+}

@@ -1,0 +1,72 @@
+﻿
+@page "/recepcionmateriales"
+<br />
+<button class="btn btn-outline-primary" @onclick="ComeBack"><FeatherArrowLeft Color="Blue"></FeatherArrowLeft></button>
+<br />
+<br />
+<h1>Recepción de materiales</h1>
+<p>En esta sección se podrán gestionar la recepción de los materiales.</p>
+<hr />
+<RadzenDataGrid AllowFiltering="true" AllowColumnResize="true" AllowAlternatingRows="false" FilterMode="FilterMode.Advanced" AllowSorting="true" PageSize="4"
+                AllowPaging="true" PagerHorizontalAlign="HorizontalAlign.Left" ShowPagingSummary="true"
+                Data="@oRespuestaPendienteRecepcion" TItem="Insumo" ColumnWidth="250px" LogicalFilterOperator="LogicalFilterOperator.Or">
+    <Columns>
+        <RadzenDataGridColumn TItem="Insumo" Property="Descripcion" Title="Descripción" Width="100px" />
+        <RadzenDataGridColumn TItem="Insumo" Property="Codigo" Title="Código" Width="100px" />
+        <RadzenDataGridColumn TItem="Insumo" Property="StockReal" Title="Cantidad" Width="100px" />
+
+        <RadzenDataGridColumn TItem="Insumo" Property="" Title="" Filterable="false" Width="30px">
+            <Template Context="data">
+                <button class="btn" title="Crear cotización" @onclick="() => confirmarRecepcion(data.Id)"><FeatherCheck Color="blue" /></button>
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    List<Insumo> oRespuestaPendienteRecepcion = new();
+    Respuesta<List<Insumo>> oRespuesta = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var respuesta = await http.GetFromJsonAsync<Respuesta<List<Insumo>>>("/api/Insumo");
+        oRespuesta = respuesta;
+        oRespuestaPendienteRecepcion = respuesta.List.Where(x => x.StockReal <= x.StockMin && x.Recepcion == "Esperando recepcion").ToList();
+        StateHasChanged();
+    }
+    async Task ComeBack()
+    {
+        nav.NavigateTo("/deposito");
+    }
+    public async Task confirmarRecepcion(int id)
+    {
+        SweetAlertResult result = await Swal.FireAsync(new SweetAlertOptions
+            {
+                Title = "¿Está seguro?",
+                Text = "Confirmará la recepción.",
+                Icon = SweetAlertIcon.Warning,
+                ShowCancelButton = true,
+                ConfirmButtonText = "Aceptar",
+                CancelButtonText = "Cancelar"
+            });
+
+        if (!string.IsNullOrEmpty(result.Value))
+        {
+            var insumo = await http.GetFromJsonAsync<Respuesta<Insumo>>($"/api/Insumo/{id}");
+            insumo.List.Recepcion = "Recibido";
+            Console.WriteLine(id);
+            var orden = await http.GetFromJsonAsync<Respuesta<Ordencompra>>($"/api/OC/insumo/{id}");
+            insumo.List.StockReal +=orden.List.Cantidad;
+            orden.List.Recepcionada = DateTime.Now;
+
+            await http.PutAsJsonAsync<Ordencompra>("/api/OC", orden.List);
+            await http.PutAsJsonAsync<Insumo>("/api/Insumo", insumo.List);
+
+            await OnInitializedAsync();
+        }
+        else if (result.Dismiss == DismissReason.Cancel)
+        {
+
+        }
+    }
+}
